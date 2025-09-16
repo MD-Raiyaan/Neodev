@@ -12,30 +12,27 @@ export async function POST(request) {
         const body =await request.json();
         const prompt = body.prompt;
 
-        console.log("Prompt: ", prompt);
-
         const client = new OpenAI({ baseURL: endpoint, apiKey: token });
         const response = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
+          model: "gemini-2.0-flash",
+          messages: [
             {
-            role: "system",
-            content:
+              role: "system",
+              content:
                 "Return either node or react based on what do you think this project should be. Only return a single word either 'node' or 'react'. Do not return anything extra",
             },
             {
-            role: "user",
-            content: prompt,
+              role: "user",
+              content: prompt,
             },
-        ],
-        max_completion_tokens: 100,
+          ],
+          max_completion_tokens: 100,
         });
 
         const answer = response.choices[0].message.content || "";
+        console.log("answer : ",answer)
 
-        console.log("Answer: ", answer);
-
-        if (answer == "react") {
+        if (answer.trim() == "react") {
         return NextResponse.json({
             prompts: [
             BASE_PROMPT,
@@ -45,7 +42,7 @@ export async function POST(request) {
         });
         }
 
-        if (answer === "node") {
+        if (answer.trim() === "node") {
         return NextResponse.json({
             prompts: [
             `Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${reactBasePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`,

@@ -12,14 +12,14 @@ export async function POST(request) {
 
         const client = new OpenAI({ baseURL: endpoint, apiKey: token });
         const response = await client.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                {
-                role: "system",
-                content:getSystemPrompt()
-                },
-                ...messages
-             ],
+          model: "gemini-2.0-flash",
+          messages: [
+            {
+              role: "system",
+              content: getSystemPrompt(),
+            },
+            ...messages,
+          ],
         });
 
         return NextResponse.json({ message: response.choices[0].message.content });

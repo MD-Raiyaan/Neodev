@@ -1,9 +1,17 @@
 "use client";
 import { ArrowRight, Code, Zap, Globe, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useStore } from "../hooks/useStore";
 
 export default function Home() {
+  const {setUrl,updatePrompt}=useStore();
+  
+  useEffect(()=>{
+    setUrl("");
+    updatePrompt("");
+  },[]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Navigation */}
@@ -15,14 +23,23 @@ export default function Home() {
             </div>
             <span className="text-xl font-bold text-white">Neodev</span>
           </div>
-          <div className="hidden md:flex items-center space-x-6 text-sm text-gray-300">
-            <a href="#features" className="hover:text-white transition-colors">
+          <div className="flex items-center space-x-6 text-sm text-gray-300">
+            <a
+              href="#features"
+              className="hover:text-white transition-colors hidden md:inline"
+            >
               Features
             </a>
-            <a href="#about" className="hover:text-white transition-colors">
+            <a
+              href="#about"
+              className="hover:text-white transition-colors hidden md:inline"
+            >
               About
             </a>
-            <a href="#contact" className="hover:text-white transition-colors">
+            <a
+              href="#contact"
+              className="hover:text-white transition-colors hidden md:inline"
+            >
               Contact
             </a>
           </div>
@@ -101,12 +118,14 @@ export default function Home() {
 
 function PromptForm() {
   const router = useRouter();
+  const { updatePrompt } = useStore();
 
   const [prompt, setPrompt] = useState("");
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (prompt && prompt.trim()) {
-      router.push(`/generate?prompt=${encodeURIComponent(prompt)}`);
+      updatePrompt(prompt);
+      router.push(`/generate`);
     }
   };
 

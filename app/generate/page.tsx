@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import { Spinner } from "@/components/ui/spinner";
 import { FileExplorer } from "@/components/FileExplorer";
 import { StepsPanel } from "@/components/StepsPanel";
 import { ChatPanel } from "@/components/ChatPanel";
 import { PreviewCodeTabs } from "@/components/PreviewCodeTabs";
 import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { parseXml } from "@/lib/steps";
 import { useWebcontainer } from "@/hooks/useWebcontainer";
+import { useRouter } from "next/navigation";
+import { WebContainer } from "@webcontainer/api";
+import { useStore } from "@/hooks/useStore";
 
 interface FileNode {
   id: string;
@@ -45,36 +48,65 @@ function GeneratePage() {
   const [selectedFile, setSelectedFile] = useState<FileNode | null>(null);
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
   const [steps, setSteps] = useState<Step[]>([]);
-  const webContainer = useWebcontainer();
+  const [llmresponses, setllmresponses] = useState<
+    { role:String; content: String }[]
+  >([]);
+  const webContainer = useWebcontainer() as WebContainer;
+  const [fullscreen, setFullscreen] = useState("");
   const [webContainerReady, setWebContainerReady] = useState(false);
-  const searchparams = useSearchParams();
+  const {prompt,setUrl,updatePrompt}=useStore();
+  const router = useRouter();
 
   useEffect(() => {
     if (webContainer) setWebContainerReady(true);
   }, [webContainer]);
 
-  const prompt = searchparams.get("prompt");
+  const onChatSubmit = async (message: string) => {
+    const newMessages = [...llmresponses, { role: "user", content: message }];
+    const stepResponse = await axios.post("/api/chat", {
+      messages: newMessages,
+    });
+    console.log(newMessages);
+    console.log(stepResponse.data);
+    const chatSteps = parseXml(stepResponse.data.message).map((x) => {
+      x.status = "pending";
+      return x;
+    });
+    setSteps((prevSteps) => [...prevSteps, ...chatSteps]);
+    setllmresponses(() => [
+      ...newMessages,
+      { role: "assistant", content: stepResponse.data.message },
+    ]);
+  };
 
   const getId = () =>
     Date.now().toString() + Math.random().toString(36).substring(2);
 
   async function init() {
     const response = await axios.post("/api/template", { prompt });
+    console.log(response.data);
     const { prompts, uiPrompts } = response.data;
     setSteps(parseXml(uiPrompts[0]));
-    const stepResponse = await axios.post("/api/chat", {
-      messages: [...prompts, prompt].map((content) => {
-        return {
-          role: "user",
-          content,
-        };
-      }),
+    const initialPrompts = [...prompts, prompt].map((content) => {
+      return {
+        role: "user",
+        content: content as string,
+      };
     });
+    const stepResponse = await axios.post("/api/chat", {
+      messages: initialPrompts,
+    });
+
     const chatSteps = parseXml(stepResponse.data.message).map((x) => {
       x.status = "pending";
       return x;
     });
     setSteps((prevSteps) => [...prevSteps, ...chatSteps]);
+    setllmresponses((prev) => [
+      ...prev,
+      ...initialPrompts,
+      { role: "assistant", content: stepResponse.data.message },
+    ]);
   }
 
   useEffect(() => {
@@ -148,7 +180,6 @@ function GeneratePage() {
 
       const processFile = (file: FileNode, isRootFolder: boolean) => {
         if (file.type === "folder") {
-          // For folders, create a directory entry
           mountStructure[file.name] = {
             directory: file.children
               ? Object.fromEntries(
@@ -167,7 +198,6 @@ function GeneratePage() {
               },
             };
           } else {
-            // For files, create a file entry with contents
             return {
               file: {
                 contents: file.content || "",
@@ -179,7 +209,6 @@ function GeneratePage() {
         return mountStructure[file.name];
       };
 
-      // Process each top-level file/folder
       files.forEach((file) => processFile(file, true));
 
       return mountStructure;
@@ -187,7 +216,6 @@ function GeneratePage() {
 
     const mountStructure = createMountStructure(files);
 
-    // Mount the structure if WebContainer is available
     console.log(mountStructure);
     webContainer?.mount(mountStructure);
   }, [files, webContainer]);
@@ -198,57 +226,86 @@ function GeneratePage() {
 
   if (!webContainerReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading WebContainer...
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <Spinner className="mb-4" />
+        <span className="text-gray-500">Loading WebContainer...</span>
       </div>
     );
   }
-  
+
+  const handleFullscreen=()=>{
+     if(fullscreen==="")setFullscreen("!hidden");
+     else setFullscreen("");
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <header className="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Link
-              href="/"
-              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+            <Button
+              type="button"
+              onClick={() =>{
+                 setUrl("");
+                 updatePrompt("");
+                 return router.push("/");
+              }}
+              variant="outline"
+              className="flex items-center text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
               Back to Home
-            </Link>
-            <div className="h-6 w-px bg-gray-300"></div>
-            <h1 className="text-xl font-semibold text-gray-900">Neodev</h1>
+            </Button>
+            <div className="h-6 w-px bg-gray-300 dark:bg-neutral-700"></div>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Neodev
+            </h1>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <div className="flex h-[calc(100vh-73px)]">
-        {/* Left Panel - Steps and Chat */}
-        <div className="w-80 border-r border-gray-200 bg-white flex flex-col">
-          <StepsPanel steps={steps} currentStep={currentStep} />
-          <div className="h-fit border-t border-gray-200">
-            <ChatPanel />
+        {/* Left Panel - Steps + Chat */}
+        <div
+          className={`${fullscreen} w-96 border-r border-gray-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/50 backdrop-blur-md flex flex-col`}
+        >
+          {/* Scrollable Steps */}
+          <div className="flex-1 overflow-y-auto">
+            <StepsPanel
+              steps={steps}
+              currentStep={currentStep}
+              loading={steps.length === 0}
+            />
+          </div>
+
+          {/* Fixed Chat at bottom */}
+          <div className="border-t border-gray-200 dark:border-neutral-800">
+            <ChatPanel onChat={onChatSubmit} />
           </div>
         </div>
 
         {/* Middle Panel - File Explorer */}
-        <div className="w-80 border-r border-gray-200 bg-white">
+        <div
+          className={`${fullscreen} w-80 border-r border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900`}
+        >
           <FileExplorer
             files={files}
             selectedFile={selectedFile}
             onFileSelect={setSelectedFile}
+            loading={files.length === 0}
           />
         </div>
 
         {/* Right Panel - Preview/Code */}
-        <div className="flex-1 bg-gray-50">
+        <div className="flex-1 bg-gray-50 dark:bg-neutral-950">
           <PreviewCodeTabs
             selectedFile={selectedFile}
             activeTab={activeTab}
             onTabChange={setActiveTab}
             webContainer={webContainer}
+            onFullScreen={handleFullscreen}
           />
         </div>
       </div>
@@ -260,8 +317,9 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          Loading...
+        <div className="min-h-screen flex flex-col items-center justify-center">
+          <Spinner className="mb-4" />
+          <span className="text-gray-500">Loading page...</span>
         </div>
       }
     >
