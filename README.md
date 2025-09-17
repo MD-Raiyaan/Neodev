@@ -61,10 +61,6 @@ Neodev is a modern, interactive web-based code preview and editing platform. It 
 
 Contributions are welcome! Please open issues or submit pull requests for bug fixes, new features, or improvements.
 
-## License
-
-This project is licensed under the MIT License.
-
 ---
 
 **Neodev** — Empowering developers with a beautiful, modern code preview experience.
