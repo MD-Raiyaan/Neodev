@@ -23,26 +23,6 @@ export default function Home() {
             </div>
             <span className="text-xl font-bold text-white">Neodev</span>
           </div>
-          <div className="flex items-center space-x-6 text-sm text-gray-300">
-            <a
-              href="#features"
-              className="hover:text-white transition-colors hidden md:inline"
-            >
-              Features
-            </a>
-            <a
-              href="#about"
-              className="hover:text-white transition-colors hidden md:inline"
-            >
-              About
-            </a>
-            <a
-              href="#contact"
-              className="hover:text-white transition-colors hidden md:inline"
-            >
-              Contact
-            </a>
-          </div>
         </div>
       </nav>
 
