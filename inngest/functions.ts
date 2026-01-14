@@ -201,42 +201,6 @@ export const AiCodeAgent = inngest.createFunction(
       });
     }
 
-    const fragementTitleGenerator = createAgent({
-      name: "fragment-title-generator",
-      description: "A fragment title generator",
-      system: FRAGMENT_TITLE_PROMPT,
-      model: gemini({
-        model:"gemini-2.0-flash-lite",
-      }),
-    });
-
-    const responseGenerator = createAgent({
-      name: "response-generator",
-      description: "A response generator",
-      system: RESPONSE_PROMPT,
-      model: gemini({
-        model: "gemini-2.0-flash-lite",
-      }),
-    });
-
-    const { output: fragmentTitleOutput } = await fragementTitleGenerator.run(
-      result.state.data.summary
-    );
-    const { output: responseOuput } = await responseGenerator.run(
-      result.state.data.summary
-    );
-
-    const parseResponse = (value: Message[]) => {
-      const output = value[0];
-      if (output.type !== "text") {
-        return "Fragment";
-      }
-      if (Array.isArray(output.content)) {
-        return output.content.map((txt) => txt).join("");
-      }
-      return output.content;
-    };
-
     const isError =
       !result?.state.data.summary ||
       Object.keys(result?.state.data.files || {}).length == 0;
@@ -274,6 +238,74 @@ export const AiCodeAgent = inngest.createFunction(
         },
       });
     });
+
+    if(isError){
+       return {
+         url: hosturl,
+         title: "Fragment",
+         files: {},
+         summary: "Something went wrong",
+       };
+    }
+
+
+
+    const fragementTitleGenerator = createAgent({
+      name: "fragment-title-generator",
+      description: "A fragment title generator",
+      system: FRAGMENT_TITLE_PROMPT,
+      model: gemini({
+        model: "gemini-2.5-flash",
+      }),
+    });
+
+    const responseGenerator = createAgent({
+      name: "response-generator",
+      description: "A response generator",
+      system: RESPONSE_PROMPT,
+      model: gemini({
+        model: "gemini-2.5-flash",
+      }),
+    });
+
+
+    let fragmentTitleOutput: Message[] = [];
+    let responseOuput: Message[] = [];
+
+    try {
+      const { output: fragmentTitleOutputResult } =
+        await fragementTitleGenerator.run(result.state.data.summary);
+      fragmentTitleOutput = fragmentTitleOutputResult;
+    } catch (error) {
+      console.error("Error generating fragment title:", error);
+      fragmentTitleOutput = [{ type: "text", content: "Fragment" } as Message];
+    }
+
+    try {
+      const { output: responseOutputResult } = await responseGenerator.run(
+        result.state.data.summary
+      );
+      responseOuput = responseOutputResult;
+    } catch (error) {
+      console.error("Error generating response:", error);
+      responseOuput = [
+        {
+          type: "text",
+          content: result.state.data.summary,
+        } as Message,
+      ];
+    }
+
+    const parseResponse = (value: Message[]) => {
+      const output = value[0];
+      if (output.type !== "text") {
+        return "Fragment";
+      }
+      if (Array.isArray(output.content)) {
+        return output.content.map((txt) => txt).join("");
+      }
+      return output.content;
+    };
 
     return {
       url: hosturl,
