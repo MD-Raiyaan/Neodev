@@ -277,7 +277,6 @@ export const AiCodeAgent = inngest.createFunction(
         await fragementTitleGenerator.run(result.state.data.summary);
       fragmentTitleOutput = fragmentTitleOutputResult;
     } catch (error) {
-      console.error("Error generating fragment title:", error);
       fragmentTitleOutput = [{ type: "text", content: "Fragment" } as Message];
     }
 
@@ -287,7 +286,6 @@ export const AiCodeAgent = inngest.createFunction(
       );
       responseOuput = responseOutputResult;
     } catch (error) {
-      console.error("Error generating response:", error);
       responseOuput = [
         {
           type: "text",
