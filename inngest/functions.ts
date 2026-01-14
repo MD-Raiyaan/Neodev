@@ -269,15 +269,15 @@ export const AiCodeAgent = inngest.createFunction(
     });
 
 
-    let fragmentTitleOutput: Message[] = [];
-    let responseOuput: Message[] = [];
+    let fragmentTitleOutput;
+    let responseOuput;
 
     try {
       const { output: fragmentTitleOutputResult } =
         await fragementTitleGenerator.run(result.state.data.summary);
       fragmentTitleOutput = fragmentTitleOutputResult;
     } catch (error) {
-      fragmentTitleOutput = [{ type: "text", content: "Fragment" } as Message];
+      fragmentTitleOutput = [{ type: "text", content: "Fragment" }];
     }
 
     try {
@@ -290,26 +290,34 @@ export const AiCodeAgent = inngest.createFunction(
         {
           type: "text",
           content: result.state.data.summary,
-        } as Message,
+        } 
       ];
     }
 
-    const parseResponse = (value: Message[]) => {
-      const output = value[0];
-      if (output.type !== "text") {
-        return "Fragment";
-      }
-      if (Array.isArray(output.content)) {
-        return output.content.map((txt) => txt).join("");
-      }
-      return output.content;
+    const parseResponse = (value: any, fallback = "Fragment"): string => {
+      // case 1: Gemini output
+      const geminiText = value?.candidates?.[0]?.content?.parts
+        ?.map((p: any) => p?.text ?? "")
+        .join("")
+        .trim();
+
+      if (geminiText) return geminiText;
+
+      // case 2: Message[]
+      const msg = Array.isArray(value) ? value?.[0] : null;
+
+      if (!msg || msg.type !== "text") return fallback;
+
+      if (Array.isArray(msg.content)) return msg.content.join("");
+
+      return (msg.content ?? fallback).toString();
     };
 
     return {
       url: hosturl,
-      title: parseResponse(fragmentTitleOutput),
+      title: parseResponse(fragmentTitleOutput, "Fragment"),
       files: result.state.data.files,
-      summary: parseResponse(responseOuput),
+      summary: parseResponse(responseOuput, result.state.data.summary),
     };
   }
 );
