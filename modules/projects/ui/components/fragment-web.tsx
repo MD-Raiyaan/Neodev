@@ -8,23 +8,31 @@ interface props {
 }
 
 export default function FragmentWeb({ data }: props) {
-  const [fragmentKey,setActiveFragmentkey]=useState(0);
-  const [copied,setCopied]=useState(false);
-  const onRefresh=()=>{
-    setActiveFragmentkey((prev)=>prev+1);
-  }
-  const handleCopy=()=>{
+  const [fragmentKey, setActiveFragmentkey] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const onRefresh = () => {
+    setActiveFragmentkey((prev) => prev + 1);
+  };
+  const handleCopy = () => {
     navigator.clipboard.writeText(data.sandboxurl);
     setCopied(true);
-    setTimeout(()=>setCopied(false),2000);
-  }
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const toHttp = (url:string) => {
+    if (!url) return url;
+    if (url.startsWith("https://")) return url;
+    if (url.startsWith("http://")) return url.replace("http://", "https://");
+    return "https://" + url;
+  };
+
   return (
     <div className="flex flex-col w-full h-full">
       <div className="p-2 border-b bg-sidebar flex items-center gap-x-2">
         <Hint text="click to refresh" side="bottom">
-        <Button size="sm" variant="outline" onClick={onRefresh}>
-          <RefreshCcwIcon />
-        </Button>
+          <Button size="sm" variant="outline" onClick={onRefresh}>
+            <RefreshCcwIcon />
+          </Button>
         </Hint>
         <Hint text="click to copy" side="bottom">
           <Button
@@ -56,7 +64,7 @@ export default function FragmentWeb({ data }: props) {
         className="h-full w-full"
         sandbox="allow-forms allow-scripts allow-same-origin"
         loading="lazy"
-        src={data.sandboxurl}
+        src={toHttp(data.sandboxurl)}
       />
     </div>
   );
